@@ -31,13 +31,20 @@
 /// THE SOFTWARE.
 
 import CoreImage
+import UIKit
 
 class ContentViewModel: ObservableObject {
     @Published var error: Error?
     @Published var frame: CGImage?
+    @Published var image: CGImage?
+//    @Published var rects = [CGRect]()
+    @Published var frameCount = 0
+    @Published var trackPolyRect = [TrackedPolyRect]()
+    
 //    @Published var devicePosition: AVCaptureDevice.Position = .back
     @Published var cameraManager = CameraManager.shared
-    private let frameManager = FrameManager.shared
+    @Published var frameManager = FrameManager.shared
+    
     
     private let context = CIContext()
     
@@ -55,14 +62,25 @@ class ContentViewModel: ObservableObject {
             .map { $0 }
             .assign(to: &$error)
         
+        frameManager.$error
+            .receive(on: RunLoop.main)
+            .map{$0}
+            .assign(to: &$error)
+        
+        
+        frameManager.$frameCount
+            .receive(on: RunLoop.main)
+            .compactMap { count in
+                count
+            }
+            .assign(to: &$frameCount)
+            
         frameManager.$current
             .receive(on: RunLoop.main)
             .compactMap { buffer in
                 guard let image = CGImage.create(from: buffer) else {
                     return nil
                 }
-                
-                
                 var ciImage = CIImage(cgImage: image)
 //                ciImage.
                 
@@ -81,5 +99,30 @@ class ContentViewModel: ObservableObject {
                 return self.context.createCGImage(ciImage, from: ciImage.extent)
             }
             .assign(to: &$frame)
+        
+        
+        frameManager.$inputObservations
+            .receive(on: RunLoop.main)
+            .compactMap { observations in
+                observations.map { observation in
+                    TrackedPolyRect(observation: observation.value, color: .green)
+                }
+            }
+            .assign(to: &$trackPolyRect)
+        
+        frameManager.$photoData
+            .receive(on: RunLoop.main)
+            .compactMap { photoData in
+                guard let photoData,
+                      let image = UIImage(data: photoData)
+                else{
+                    return nil
+                }
+                
+                return image.cgImage
+            }
+            .assign(to: &$image)
+        
+        
     }
 }

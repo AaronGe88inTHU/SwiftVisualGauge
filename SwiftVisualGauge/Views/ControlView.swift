@@ -33,32 +33,97 @@
 import SwiftUI
 
 struct ControlView: View {
-    @ObservedObject var camera : CameraManager
+//    @ObservedObject var camera : CameraManager
+//    @ObservedObject var frame: FrameManager
+    @ObservedObject var model: ContentViewModel
     
+    @Binding var captured: Bool
+   
     var body: some View {
         VStack {
             Spacer()
             
             HStack(spacing: 12) {
+                
                 Button {
-                    camera.changeCamera()
+                    if !captured{
+                        model.trackPolyRect.removeAll()
+                        model.image = model.frame
+                    }
+                    
+                    captured.toggle()
+                    
+//                    print(model.trackPolyRect.count)
+                    
+//                    model.cameraManager.capturePhoto(model.frameManager)
+                    
+//                    camera.capturePhoto(FrameManager.shared)
+                   
+                } label: {
+                    Image("CapturePhoto")
+                        .resizable()
+                        .scaledToFit()
+                }
+                .disabled(model.frameManager.isTracking)
+                
+                Button {
+                  
+                    if !model.frameManager.isTracking{
+//                        print(model.trackPolyRect.count)
+                        model.frameManager.prepareTrack(model.trackPolyRect)
+                    }
+                   
+//                    model.rects.removeAll()
+                    if model.error != nil
+                    {
+                        model.error = nil
+                    }
+                    
+                    model.frameManager.isTracking.toggle()
+                   
+                    
+                    
+                } label: {
+                    if model.frameManager.isTracking{
+                        Image("CaptureStop")
+                            .resizable()
+                            .scaledToFit()
+                        
+                    }
+                    else{
+                        Image("CaptureVideo")
+                            .resizable()
+                            .scaledToFit()
+                    }
+                    
+                }
+                .disabled(captured)
+
+                Button {
+                    model.cameraManager.changeCamera()
                    
                     
                 } label: {
                     Image("FlipCamera")
+                        .resizable()
+                        .scaledToFit()
                 }
+                .disabled(model.frameManager.isTracking || captured)
+                
+                
+                
 
             }
         }
     }
 }
 
-struct ControlView_Previews: PreviewProvider {
-    static var previews: some View {
-        ZStack {
-            Color.black
-                .edgesIgnoringSafeArea(.all)
-            ControlView(camera: CameraManager.shared)
-        }
-    }
-}
+//struct ControlView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ZStack {
+//            Color.black
+//                .edgesIgnoringSafeArea(.all)
+//            ControlView(model: , captured: <#T##Binding<Bool>#>)
+//        }
+//    }
+//}

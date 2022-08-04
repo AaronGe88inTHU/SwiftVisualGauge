@@ -15,7 +15,6 @@
 		9EF2BE73288F89F20075586C /* SwiftVisualGaugeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BE72288F89F20075586C /* SwiftVisualGaugeTests.swift */; };
 		9EF2BE7D288F89F20075586C /* SwiftVisualGaugeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BE7C288F89F20075586C /* SwiftVisualGaugeUITests.swift */; };
 		9EF2BE7F288F89F20075586C /* SwiftVisualGaugeUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BE7E288F89F20075586C /* SwiftVisualGaugeUITestsLaunchTests.swift */; };
-		9EF2BE8D288F8A430075586C /* SequenceRequesthandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BE8C288F8A430075586C /* SequenceRequesthandler.swift */; };
 		9EF2BEA32890D1270075586C /* ContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BE992890D1270075586C /* ContentViewModel.swift */; };
 		9EF2BEA42890D1270075586C /* FrameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BE9B2890D1270075586C /* FrameView.swift */; };
 		9EF2BEA52890D1270075586C /* ToggleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BE9C2890D1270075586C /* ToggleButton.swift */; };
@@ -27,6 +26,8 @@
 		9EF2BEAE289137890075586C /* FrameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BEAB289137890075586C /* FrameManager.swift */; };
 		9EF2BEAF289137890075586C /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BEAC289137890075586C /* CameraManager.swift */; };
 		9EF2BEB1289222230075586C /* OrientationDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BEB0289222230075586C /* OrientationDetector.swift */; };
+		9EF2BEB728928E5F0075586C /* CommonTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BEB628928E5F0075586C /* CommonTypes.swift */; };
+		9EF2BEB92898BE420075586C /* ImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF2BEB82898BE420075586C /* ImageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,7 +60,6 @@
 		9EF2BE78288F89F20075586C /* SwiftVisualGaugeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftVisualGaugeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EF2BE7C288F89F20075586C /* SwiftVisualGaugeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftVisualGaugeUITests.swift; sourceTree = "<group>"; };
 		9EF2BE7E288F89F20075586C /* SwiftVisualGaugeUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftVisualGaugeUITestsLaunchTests.swift; sourceTree = "<group>"; };
-		9EF2BE8C288F8A430075586C /* SequenceRequesthandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequenceRequesthandler.swift; sourceTree = "<group>"; };
 		9EF2BE992890D1270075586C /* ContentViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContentViewModel.swift; sourceTree = "<group>"; };
 		9EF2BE9B2890D1270075586C /* FrameView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameView.swift; sourceTree = "<group>"; };
 		9EF2BE9C2890D1270075586C /* ToggleButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToggleButton.swift; sourceTree = "<group>"; };
@@ -71,6 +71,8 @@
 		9EF2BEAB289137890075586C /* FrameManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameManager.swift; sourceTree = "<group>"; };
 		9EF2BEAC289137890075586C /* CameraManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
 		9EF2BEB0289222230075586C /* OrientationDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrientationDetector.swift; sourceTree = "<group>"; };
+		9EF2BEB628928E5F0075586C /* CommonTypes.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CommonTypes.swift; sourceTree = "<group>"; };
+		9EF2BEB82898BE420075586C /* ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,7 +127,6 @@
 				9EF2BE982890D1270075586C /* ViewModels */,
 				9EF2BE9A2890D1270075586C /* Views */,
 				9EF2BE902890D0F00075586C /* Camera */,
-				9EF2BE8B288F8A270075586C /* Tracker */,
 				9EF2BE5B288F89F10075586C /* SwiftVisualGaugeApp.swift */,
 				9EF2BE5D288F89F10075586C /* Persistence.swift */,
 				9EF2BE64288F89F20075586C /* Assets.xcassets */,
@@ -161,20 +162,13 @@
 			path = SwiftVisualGaugeUITests;
 			sourceTree = "<group>";
 		};
-		9EF2BE8B288F8A270075586C /* Tracker */ = {
-			isa = PBXGroup;
-			children = (
-				9EF2BE8C288F8A430075586C /* SequenceRequesthandler.swift */,
-			);
-			path = Tracker;
-			sourceTree = "<group>";
-		};
 		9EF2BE902890D0F00075586C /* Camera */ = {
 			isa = PBXGroup;
 			children = (
 				9EF2BEAA289137890075586C /* CameraError.swift */,
 				9EF2BEAC289137890075586C /* CameraManager.swift */,
 				9EF2BEAB289137890075586C /* FrameManager.swift */,
+				9EF2BEB628928E5F0075586C /* CommonTypes.swift */,
 			);
 			path = Camera;
 			sourceTree = "<group>";
@@ -195,6 +189,7 @@
 				9EF2BE9D2890D1270075586C /* ContentView.swift */,
 				9EF2BE9E2890D1270075586C /* ControlView.swift */,
 				9EF2BE9F2890D1270075586C /* ErrorView.swift */,
+				9EF2BEB82898BE420075586C /* ImageView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -339,11 +334,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				9EF2BE5C288F89F10075586C /* SwiftVisualGaugeApp.swift in Sources */,
+				9EF2BEB728928E5F0075586C /* CommonTypes.swift in Sources */,
 				9EF2BEB1289222230075586C /* OrientationDetector.swift in Sources */,
 				9EF2BE61288F89F10075586C /* SwiftVisualGauge.xcdatamodeld in Sources */,
-				9EF2BE8D288F8A430075586C /* SequenceRequesthandler.swift in Sources */,
 				9EF2BEAE289137890075586C /* FrameManager.swift in Sources */,
 				9EF2BEA32890D1270075586C /* ContentViewModel.swift in Sources */,
+				9EF2BEB92898BE420075586C /* ImageView.swift in Sources */,
 				9EF2BEA52890D1270075586C /* ToggleButton.swift in Sources */,
 				9EF2BE5E288F89F10075586C /* Persistence.swift in Sources */,
 				9EF2BEA42890D1270075586C /* FrameView.swift in Sources */,

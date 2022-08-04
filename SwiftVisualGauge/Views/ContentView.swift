@@ -36,13 +36,40 @@ struct ContentView: View {
     @ObservedObject private var model = ContentViewModel()
     @State private var orientation: UIDeviceOrientation = .portrait
     
+//    @State var tracking = false
+    @State var captured = false
+    //    @State var rects = [CGRect] ()
+    
     var body: some View {
         ZStack {
-            FrameView(image: model.frame)
+            //            if captured{
+            //                ImageView(image: model.image, tracks: $model.trackPolyRect)
+            //                    .edgesIgnoringSafeArea(.all)
+            //            }
+            //            else{
+            if captured{
+                FrameView(image: model.image,
+                          count: 0,
+                          captured: $captured,
+                          tracking: $model.frameManager.isTracking,
+                          tracks: $model.trackPolyRect)
                 .edgesIgnoringSafeArea(.all)
+            }
+            else{
+                FrameView(image: model.frame,
+                          count: model.frameCount,
+                          captured: $captured,
+                          tracking: $model.frameManager.isTracking,
+                          tracks: $model.trackPolyRect)
+                .edgesIgnoringSafeArea(.all)
+            }
+           
+            //            }
             
             ErrorView(error: model.error)
-            ControlView(camera: model.cameraManager)
+            ControlView(model: model,
+                        captured: $captured)
+            .padding(.horizontal, 20)
             
         }
         .detectOrientation($orientation)
@@ -54,12 +81,20 @@ struct ContentView: View {
             orientation = UIDevice.current.orientation
             model.cameraManager.cameraOrient = getAVCaptureOrientation(newValue: orientation)
             model.cameraManager.changeOrientation()
-//            model.cameraManager.cameraOrient = getAVCaptureOrientation(newValue: UIDeviceOrientation(rawValue: newValue)))
+            //            model.cameraManager.cameraOrient = getAVCaptureOrientation(newValue: UIDeviceOrientation(rawValue: newValue)))
         }
+        //        .sheet(isPresented: $captured) {
+        //            if let image = model.image{
+        //                Image(uiImage: image)
+        //                    .resizable()
+        //                    .scaledToFit()
+        //            }
+        //
+        //        }
     }
     
     private func getAVCaptureOrientation(newValue: UIDeviceOrientation)->Int{
-    
+        
         switch newValue{
         case .portrait, .faceUp, .faceDown, .unknown:
             return 1
@@ -72,8 +107,8 @@ struct ContentView: View {
         @unknown default:
             return 1
         }
-           
-    
+        
+        
     }
     
 }

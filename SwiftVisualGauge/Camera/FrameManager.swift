@@ -31,23 +31,78 @@
 /// THE SOFTWARE.
 
 import AVFoundation
+import Vision
+
+
+enum VisionTrackerError: Error {
+    case readerInitializationFailed
+    case firstFrameReadFailed
+    case objectTrackingFailed
+    case rectangleDetectionFailed
+}
+
 
 class FrameManager: NSObject, ObservableObject {
     static let shared = FrameManager()
     
     @Published var current: CVPixelBuffer?
+//    @Published var time: CMTime?
+    @Published var photoData: Data?
     
-    let videoOutputQueue = DispatchQueue(
+    @Published var frameCount: Int = 0
+//    @Published var state: State = .stopped
+    @Published var isTracking = false
+    
+    
+    @Published var error: VisionTrackerError?
+    @Published var trackingLevel = VNRequestTrackingLevel.accurate
+    @Published var inputObservations = [UUID: VNDetectedObjectObservation]()
+    @Published var trackedObjects = [UUID: TrackedPolyRect]()
+
+    var orientation: CGImagePropertyOrientation = .up
+    private var cancelRequested = false
+    private let trackHandler = VNSequenceRequestHandler()
+   
+    
+    
+    private let videoOutputQueue = DispatchQueue(
         label: "VideoOutputQ",
         qos: .userInitiated,
         attributes: [],
         autoreleaseFrequency: .workItem)
     
+    private var trackQueue = DispatchQueue(label: "VisionTrackerQ", qos: .userInitiated)
+    
     private override init() {
         super.init()
         CameraManager.shared.set(self, queue: videoOutputQueue)
     }
+    
+    
+    public func prepareTrack(_ objectsToTrack: [TrackedPolyRect]) {
+        
+//        var inputObservation = VNDetectedObjectObservation(boundingBox: boundingBox)
+        
+//        inputObservations = boundingBoxs.map{
+//            VNDetectedObjectObservation(boundingBox: $0)
+//        }
+        
+        inputObservations.removeAll()
+        
+        for rect in objectsToTrack{
+            let inputObservation = VNDetectedObjectObservation(boundingBox: rect.boundingBox)
+            inputObservations[inputObservation.uuid] = inputObservation
+            trackedObjects[inputObservation.uuid] = rect
+        }
+        
+        frameCount = 0
+        
+        
+    }
+        
+    
 }
+
 
 extension FrameManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(
@@ -56,9 +111,86 @@ extension FrameManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         from connection: AVCaptureConnection
     ) {
         if let buffer = sampleBuffer.imageBuffer {
-            DispatchQueue.main.async {
-                self.current = buffer
+            if !isTracking || inputObservations.isEmpty{
+                DispatchQueue.main.async {
+                    self.current = buffer
+                }
+            }
+            
+            else{
+//                trackQueue.async {
+                    let requests = self.inputObservations.map {
+                        let request = VNTrackObjectRequest(detectedObjectObservation: $0.value)
+                        request.trackingLevel = trackingLevel
+                        return request
+                    }
+                    
+                    do{
+                        
+                        try self.trackHandler.perform(requests, on: buffer)
+                        
+//                        let observations = requests.map { request in
+//                            request.results!.first! as! VNDetectedObjectObservation
+//                        }
+                        
+                        let objRects: [(VNDetectedObjectObservation, TrackedPolyRect)] = requests.compactMap { request in
+                            guard let results = request.results
+                            else{
+                                return nil
+                            }
+                            
+                            guard let observation = results.first as? VNDetectedObjectObservation
+                            else{
+                                return nil
+                            }
+                            
+                            let rectStyle: TrackedPolyRectStyle = observation.confidence > 0.5 ? .solid : .dashed
+                            print(observation.confidence)
+                            let knowRect = trackedObjects[observation.uuid]!
+                            
+                            return (observation, TrackedPolyRect(observation: observation,
+                                                   color: knowRect.color,
+                                                   style: rectStyle))
+                            
+                        }
+//                        DispatchQueue.main.async {
+                        
+                        for objRect in objRects {
+                            self.inputObservations[objRect.0.uuid] = objRect.0
+                            self.trackedObjects[objRect.0.uuid] = objRect.1
+                        }
+                       
+//                            print(observations)
+//                        }
+                        
+//                        print  (self.inputObservations.count)
+                    }
+                    catch{
+                        self.error = VisionTrackerError.objectTrackingFailed
+//                        return
+//                    }
+                }
+                
+                DispatchQueue.main.async {
+                    self.current = buffer
+                    self.frameCount = self.frameCount + 1
+//                    self.time = CMTimeMakeWithSeconds(<#T##seconds: Float64##Float64#>, preferredTimescale: <#T##Int32#>)
+                }
+                
+                
             }
         }
     }
 }
+
+extension FrameManager: AVCapturePhotoCaptureDelegate{
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        if let error = error {
+            print("Error capturing photo: \(error)")
+            return
+        } else {
+            photoData = photo.fileDataRepresentation()
+        }
+    }
+}
+

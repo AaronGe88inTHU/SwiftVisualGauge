@@ -44,13 +44,21 @@ class CameraManager: ObservableObject {
     static let shared = CameraManager()
     
     @Published var error: CameraError?
+    @Published var photoQualityPrioritizationMode: AVCapturePhotoOutput.QualityPrioritization = .balanced
+    @Published var canChangeCameraOrRotate = true
+    @Published var rate: Int = 3
+    @Published var minRate : Int = 60
+    @Published var maxRate : Int = 3
     
     
     let session = AVCaptureSession()
     
-    private let sessionQueue = DispatchQueue(label: "camera sessionQ")
+    private let sessionQueue = DispatchQueue(label: "cameraSessionQ")
     
     private let videoOutput = AVCaptureVideoDataOutput()
+    private let photoOutput = AVCapturePhotoOutput()
+    private var movieFileOutput: AVCaptureMovieFileOutput?
+    
     private var status = Status.unconfigured
    
     
@@ -105,6 +113,8 @@ class CameraManager: ObservableObject {
         }
         
         
+        session.sessionPreset = .hd1920x1080
+        
         let device = AVCaptureDevice.default(
             .builtInWideAngleCamera,
             for: .video,
@@ -116,7 +126,31 @@ class CameraManager: ObservableObject {
             return
         }
         
+        var isFPSSupported = false
+        
+        let videoSupportedFrameRateRanges = camera.activeFormat.videoSupportedFrameRateRanges
+        for range in videoSupportedFrameRateRanges {
+            if (range.maxFrameRate >= Double(rate) && range.minFrameRate <= Double(rate)) {
+                minRate = Int(range.minFrameRate)
+                maxRate = Int(range.maxFrameRate)
+                isFPSSupported = true
+                break
+            }
+        }
+        
+        
+        
         do {
+            
+            try camera.lockForConfiguration()
+            camera.focusMode = .continuousAutoFocus
+            if isFPSSupported{
+                camera.activeVideoMinFrameDuration = CMTimeMake(value: 1, timescale: Int32(rate))
+                camera.activeVideoMaxFrameDuration = CMTimeMake(value: 1, timescale: Int32(rate))
+            }
+            camera.unlockForConfiguration()
+            
+            
             cameraInput = try AVCaptureDeviceInput(device: camera)
             if session.canAddInput(cameraInput!) {
                 session.addInput(cameraInput!)
@@ -140,6 +174,19 @@ class CameraManager: ObservableObject {
             let videoConnection = videoOutput.connection(with: .video)
             videoConnection?.videoOrientation = AVCaptureVideoOrientation(rawValue: cameraOrient) ?? .portrait
         } else {
+            set(error: .cannotAddOutput)
+            status = .failed
+            return
+        }
+        
+        if session.canAddOutput(photoOutput){
+            session.addOutput(photoOutput)
+            photoOutput.isHighResolutionCaptureEnabled = true
+            photoOutput.isLivePhotoCaptureEnabled = false
+            photoOutput.isDepthDataDeliveryEnabled = photoOutput.isDepthDataDeliveryEnabled
+            photoOutput.maxPhotoQualityPrioritization = .quality
+            
+        }else{
             set(error: .cannotAddOutput)
             status = .failed
             return
@@ -170,7 +217,152 @@ class CameraManager: ObservableObject {
         }
     }
     
+//    func set(_ delegate: AVCapturePhotoCaptureDelegate)
+//    {
+//        self.photoOutput.capturePhoto(with: <#T##AVCapturePhotoSettings#>, delegate: T##AVCapturePhotoCaptureDelegate)
+//    }
+    
+    public func capturePhoto(_ delegate: AVCapturePhotoCaptureDelegate){
+      
+        guard let videoOrientation =  AVCaptureVideoOrientation(rawValue: self.cameraOrient)
+        else{
+            return
+        }
+        guard let cameraInput
+        else{
+            return
+        }
+        
+        sessionQueue.async {
+            guard let photoOutputConnection = self.photoOutput.connection(with: .video)
+            else{
+                return
+            }
+            
+            photoOutputConnection.videoOrientation = videoOrientation
+//            if cameraInput.device.position == .front{
+//                photoOutputConnection.isVideoMirrored = true
+//            }
+            
+            var photoSettings = AVCapturePhotoSettings()
+            
+            // Capture HEIF photos when supported. Enable auto-flash and high-resolution photos.
+            if  self.photoOutput.availablePhotoCodecTypes.contains(.hevc) {
+                photoSettings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
+            }
+            
+            
+            if cameraInput.device.isFlashAvailable {
+                photoSettings.flashMode = .auto
+            }
+            
+            
+            photoSettings.isHighResolutionPhotoEnabled = true
+            if let previewPhotoPixelFormatType = photoSettings.availablePreviewPhotoPixelFormatTypes.first {
+                photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
+            }
+            
+            self.photoOutput.capturePhoto(with: photoSettings, delegate: delegate)
+            // Live Photo capture is not supported in movie mode.
+//            if self.livePhotoMode == .on && self.photoOutput.isLivePhotoCaptureSupported {
+//                let livePhotoMovieFileName = NSUUID().uuidString
+//                let livePhotoMovieFilePath = (NSTemporaryDirectory() as NSString).appendingPathComponent((livePhotoMovieFileName as NSString).appendingPathExtension("mov")!)
+//                photoSettings.livePhotoMovieFileURL = URL(fileURLWithPath: livePhotoMovieFilePath)
+//            }
+            
+//            photoSettings.isDepthDataDeliveryEnabled = (self.depthDataDeliveryMode == .on
+//                                                        && self.photoOutput.isDepthDataDeliveryEnabled)
+//
+//            photoSettings.isPortraitEffectsMatteDeliveryEnabled = (self.portraitEffectsMatteDeliveryMode == .on
+//                                                                   && self.photoOutput.isPortraitEffectsMatteDeliveryEnabled)
+            
+//            if photoSettings.isDepthDataDeliveryEnabled {
+//                if !self.photoOutput.availableSemanticSegmentationMatteTypes.isEmpty {
+//                    photoSettings.enabledSemanticSegmentationMatteTypes = self.selectedSemanticSegmentationMatteTypes
+//                }
+//            }
+            
+            photoSettings.photoQualityPrioritization = self.photoQualityPrioritizationMode
+            
+//            let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, willCapturePhotoAnimation: {
+//                // Flash the screen to signal that AVCam took a photo.
+//                DispatchQueue.main.async {
+//                    self.previewView.videoPreviewLayer.opacity = 0
+//                    UIView.animate(withDuration: 0.25) {
+//                        self.previewView.videoPreviewLayer.opacity = 1
+//                    }
+//                }
+//            }, livePhotoCaptureHandler: { capturing in
+//                self.sessionQueue.async {
+//                    if capturing {
+//                        self.inProgressLivePhotoCapturesCount += 1
+//                    } else {
+//                        self.inProgressLivePhotoCapturesCount -= 1
+//                    }
+//
+//                    let inProgressLivePhotoCapturesCount = self.inProgressLivePhotoCapturesCount
+//                    DispatchQueue.main.async {
+//                        if inProgressLivePhotoCapturesCount > 0 {
+//                            self.capturingLivePhotoLabel.isHidden = false
+//                        } else if inProgressLivePhotoCapturesCount == 0 {
+//                            self.capturingLivePhotoLabel.isHidden = true
+//                        } else {
+//                            print("Error: In progress Live Photo capture count is less than 0.")
+//                        }
+//                    }
+//                }
+//            }, completionHandler: { photoCaptureProcessor in
+//                // When the capture is complete, remove a reference to the photo capture delegate so it can be deallocated.
+//                self.sessionQueue.async {
+//                    self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = nil
+//                }
+//            }, photoProcessingHandler: { animate in
+//                // Animates a spinner while photo is processing
+//                DispatchQueue.main.async {
+//                    if animate {
+//                        self.spinner.hidesWhenStopped = true
+//                        self.spinner.center = CGPoint(x: self.previewView.frame.size.width / 2.0, y: self.previewView.frame.size.height / 2.0)
+//                        self.spinner.startAnimating()
+//                    } else {
+//                        self.spinner.stopAnimating()
+//                    }
+//                }
+//            }
+//            )
+            
+            // Specify the location the photo was taken
+//            photoCaptureProcessor.location = self.locationManager.location
+            
+            // The photo output holds a weak reference to the photo capture delegate and stores it in an array to maintain a strong reference.
+//            self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = photoCaptureProcessor
+//            self.photoOutput.capturePhoto(with: photoSettings, delegate: photoCaptureProcessor)
+        }
+    }
+    
+    
+//    public func recordMovie(){
+//        canChangeCameraOrRotate = false
+//        sessionQueue.async {
+//            let movieFileOutput = AVCaptureMovieFileOutput()
+//
+//            guard self.session.canAddOutput(movieFileOutput)
+//            else{
+//                return
+//            }
+//
+//            self.session.beginConfiguration()
+//            self.session.addOutput(movieFileOutput)
+//            self.session.sessionPreset = .high
+//
+//        }
+//    }
+    
     public func changeCamera(){
+        guard canChangeCameraOrRotate
+        else
+        {
+            return
+        }
         status = .unconfigured
         sessionQueue.async {
             let currentVideoDevice = self.cameraInput!.device
@@ -221,21 +413,6 @@ class CameraManager: ObservableObject {
                     
                     self.updateOrientation()
                     
-//                    self.session.removeOutput(self.videoOutput)
-//
-//                    if self.session.canAddOutput(self.videoOutput) {
-//                        self.session.addOutput(self.videoOutput)
-//
-//                        self.videoOutput.videoSettings =
-//                        [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-//
-//                        let videoConnection = self.videoOutput.connection(with: .video)
-//                        videoConnection?.videoOrientation = AVCaptureVideoOrientation(rawValue: self.cameraOrient) ?? .portrait
-//                    } else {
-//                        self.set(error: .cannotAddOutput)
-//                        self.status = .failed
-//                        return
-//                    }
                     
                     //                    if let connection = self.movieFileOutput?.connection(with: .video) {
                     //                        self.session.sessionPreset = .high
@@ -304,6 +481,12 @@ class CameraManager: ObservableObject {
     }
     
     public func changeOrientation(){
+        guard canChangeCameraOrRotate
+        else
+        {
+            return
+        }
+        
         
         status = .unconfigured
         sessionQueue.async {
@@ -321,6 +504,7 @@ class CameraManager: ObservableObject {
     }
     
     private func updateOrientation(){
+      
         self.session.removeOutput(self.videoOutput)
         
         if self.session.canAddOutput(self.videoOutput) {
@@ -335,7 +519,7 @@ class CameraManager: ObservableObject {
                 
                 let currentVideoDevice = self.cameraInput!.device
                 let currentPosition = currentVideoDevice.position
-                if currentPosition == .back{
+                if currentPosition == .front{
                     if videoConnection.isVideoMirroringSupported{
                         videoConnection.automaticallyAdjustsVideoMirroring = false
                         videoConnection.isVideoMirrored = true
